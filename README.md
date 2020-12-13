@@ -2,6 +2,6 @@
 
 used for tests with semgrep tool
 
-′′′
-echo 1
-′′′
+```
+time semgrep --config rules/ src/
+```

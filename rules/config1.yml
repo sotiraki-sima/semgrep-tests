@@ -1,0 +1,313 @@
+rules:
+- id: flask-secure-set-cookie
+  patterns:
+    - pattern-either: 
+      - pattern: |
+          flask.response.set_cookie(...)
+    - pattern-not: |
+        flask.response.set_cookie(..., httponly=True, secure=True,...)
+  message: |
+    Flask cookies should be handled securely by setting secure=True, httponly=True, and samesite='Lax' in  response.set_cookie(...). If your situation calls for different settings, explicitly disable the setting.
+    If you want to send the cookie over http, set secure=False.  If you want to let client-side JavaScript
+    read the cookie, set httponly=False. If you want to attach cookies to requests for external sites,
+    set samesite=None.
+  severity: WARNING
+  languages: [python]
+- id: php.lang.security.weak-crypto.weak-crypto
+  patterns:
+  - pattern: $FUNC(...);
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: crypt|md5|md5_file|sha1|sha1_file|str_rot13
+  message: |
+    Detected usage of weak crypto function. Consider using stronger alternatives.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/book.sodium.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/CryptoFunctionsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.weak-crypto.weak-crypto
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.preg-replace-eval.preg-replace-eval
+  patterns:
+  - pattern: preg_replace(...);
+  - pattern-not: preg_replace("...", ...);
+  message: |
+    Calling preg_replace with user input in the pattern can lead to arbitrary
+    code execution. The eval modifier (`/e`) evaluates the replacement argument
+    as code.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.preg-replace.php
+    - https://www.php.net/manual/en/reference.pcre.pattern.modifiers.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/PregReplaceSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.preg-replace-eval.preg-replace-eval
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.phpinfo-use.phpinfo-use
+  pattern: phpinfo(...);
+  message: |
+    The 'phpinfo' function may reveal sensitive information about your environment.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.phpinfo
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/PhpinfosSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.phpinfo-use.phpinfo-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.md5-loose-equality.md5-loose-equality
+  patterns:
+  - pattern-either:
+    - pattern: $X == $FUNC(...)
+    - pattern: $FUNC(...) == $X
+    - pattern: $FUNC(...) == $FUNC(...)
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: md5|md5_file
+  message: |
+    Make sure comparisons involving md5 values are strict (use `===` not `==`) to avoid type juggling issues
+  metadata:
+    references:
+    - https://www.php.net/manual/en/types.comparisons.php
+    - https://www.whitehatsec.com/blog/magic-hashes/
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.md5-loose-equality.md5-loose-equality
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.mcrypt-use.mcrypt-use
+  patterns:
+  - pattern: $FUNC(...);
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: (mcrypt_|mdecrypt_).+
+  message: |
+    Mcrypt functionality has been deprecated and/or removed in recent PHP
+    versions. Consider using Sodium or OpenSSL.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/intro.mcrypt.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/CryptoFunctionsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.mcrypt-use.mcrypt-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.mb-ereg-replace-eval.mb-ereg-replace-eval
+  patterns:
+  - pattern: mb_ereg_replace($PATTERN, $REPL, $STR, $OPTIONS);
+  - pattern-not: mb_ereg_replace($PATTERN, $REPL, $STR, "...");
+  message: |
+    Calling mb_ereg_replace with user input in the options can lead to arbitrary
+    code execution. The eval modifier (`e`) evaluates the replacement argument
+    as code.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.mb-ereg-replace.php
+    - https://www.php.net/manual/en/function.mb-regex-set-options.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.mb-ereg-replace-eval.mb-ereg-replace-eval
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.ftp-use.ftp-use
+  patterns:
+  - pattern: $FUNC(...);
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: ftp_.+
+  message: |
+    FTP allows for unencrypted file transfers. Consider using an encrypted alternative.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/intro.ftp.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/FringeFunctionsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.ftp-use.ftp-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.file-inclusion.file-inclusion
+  patterns:
+  - pattern: $FUNC(...);
+  - pattern-not: $FUNC("...");
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: include|include_once|require|require_once
+  message: |
+    Non-constant file inclusion. This can lead to LFI or RFI if user
+    input reaches this statement.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.include.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/EasyRFISniff.php
+    - https://en.wikipedia.org/wiki/File_inclusion_vulnerability#Types_of_Inclusion
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.file-inclusion.file-inclusion
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.exec-use.exec-use
+  patterns:
+  - pattern: $FUNC(...);
+  - pattern-not: $FUNC('...', ...);
+  - metavariable-regex:
+      metavariable: $FUNC
+      regex: exec|passthru|proc_open|popen|shell_exec|system|pcntl_exec
+  message: |
+    Executing non-constant commands. This can lead to command injection.
+  metadata:
+    references:
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/SystemExecFunctionsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.exec-use.exec-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.eval-use.eval-use
+  patterns:
+  - pattern: eval(...);
+  - pattern-not: eval('...');
+  message: |
+    Evaluating non-constant commands. This can lead to command injection.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.eval
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/NoEvalsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.eval-use.eval-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.curl-ssl-verifypeer-off.curl-ssl-verifypeer-off
+  patterns:
+  - pattern-either:
+    - pattern: |
+        $ARG = $IS_VERIFIED;
+        ...
+        curl_setopt(..., CURLOPT_SSL_VERIFYPEER, $ARG);
+    - pattern: curl_setopt(..., CURLOPT_SSL_VERIFYPEER, $IS_VERIFIED)
+  - metavariable-regex:
+      metavariable: $IS_VERIFIED
+      regex: 0|false|null
+  message: |
+    SSL verification is disabled but should not be (currently CURLOPT_SSL_VERIFYPEER= $IS_VERIFIED)
+  metadata:
+    references:
+    - https://www.saotn.org/dont-turn-off-curlopt_ssl_verifypeer-fix-php-configuration/
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.curl-ssl-verifypeer-off.curl-ssl-verifypeer-off
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.backticks-use.backticks-use
+  pattern: '`...`;'
+  message: |
+    Backticks use may lead to command injection vulnerabilities.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/language.operators.execution.php
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/BackticksSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.backticks-use.backticks-use
+  languages: [php]
+  severity: ERROR
+- id: php.lang.security.assert-use.assert-use
+  patterns:
+  - pattern: assert($ASSERT, ...);
+  # - pattern-not: assert(<... $ASSERT ...>, ...); - https://github.com/returntocorp/semgrep/issues/2035
+  - pattern-not: assert("...", ...);
+  message: |
+    Calling assert with user input is equivalent to eval'ing.
+  metadata:
+    references:
+    - https://www.php.net/manual/en/function.assert
+    - https://github.com/FloeDesignTechnologies/phpcs-security-audit/blob/master/Security/Sniffs/BadFunctions/AssertsSniff.php
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/php.lang.security.assert-use.assert-use
+  languages: [php]
+  severity: ERROR
+- id: javascript.wkhtmltopdf.security.audit.wkhtmltopdf-injection.wkhtmltopdf-injection
+  message: |
+    If unverified user data can reach the `wkhtmltopdf` it can result in Server-Side Request Forgery vulnerabilities
+  severity: WARNING
+  metadata:
+    owasp: 'A1: Injection'
+    cwe: 'CWE-918: Server-Side Request Forgery (SSRF)'
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/javascript.wkhtmltopdf.security.audit.wkhtmltopdf-injection.wkhtmltopdf-injection
+  languages: [javascript]
+  patterns:
+  - pattern-inside: |
+      ...
+      $WK = require('wkhtmltopdf');
+      ...
+  - pattern-not-inside: |
+      ...
+      var $INPUT = "...";
+      ...
+  - pattern: $WK($INPUT,...)
+  - pattern-not: $WK("...",...)
+- id: javascript.wkhtmltoimage.security.audit.wkhtmltoimage-injection.wkhtmltoimage-injection
+  message: |
+    If unverified user data can reach the `wkhtmltoimage` it can result in Server-Side Request Forgery vulnerabilities
+  severity: WARNING
+  metadata:
+    owasp: 'A1: Injection'
+    cwe: 'CWE-918: Server-Side Request Forgery (SSRF)'
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/javascript.wkhtmltoimage.security.audit.wkhtmltoimage-injection.wkhtmltoimage-injection
+  languages: [javascript]
+  patterns:
+  - pattern-inside: |
+      ...
+      $WK = require('wkhtmltoimage');
+      ...
+  - pattern-not-inside: |
+      ...
+      var $INPUT = "...";
+      ...
+  - pattern: $WK.generate($INPUT,...)
+  - pattern-not: $WK.generate("...",...)
+- id: javascript.lang.security.detect-disable-mustache-escape.detect-disable-mustache-escape
+  metadata:
+    cwe: 'CWE-116: Improper Encoding or Escaping of Output'
+    owasp: 'A7: Cross-Site Scripting XSS'
+    source-rule-url: https://github.com/nodesecurity/eslint-plugin-security/blob/master/rules/detect-disable-mustache-escape.js
+    dev.semgrep.actions:
+    - block
+    - notify
+    semgrep.url: https://semgrep.dev/r/javascript.lang.security.detect-disable-mustache-escape.detect-disable-mustache-escape
+  message: |
+    Markup escaping disabled. This can be used with some template engines to escape
+    disabling of HTML entities, which can lead to XSS attacks.
+  pattern: $OBJ.escapeMarkup = false
+  severity: WARNING
+  languages:
+  - javascript
+  - typescript
